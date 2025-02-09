@@ -123,7 +123,7 @@ def seed_worker(worker_id):
 
     See https://pytorch.org/docs/stable/notes/randomness.html#dataloader.
     """
-    worker_seed = torch.initial_seed() % 2**32
+    worker_seed = torch.initial_seed() % 2 ** 32
     np.random.seed(worker_seed)
     random.seed(worker_seed)
 
@@ -158,23 +158,23 @@ class SmartDistributedSampler(distributed.DistributedSampler):
 
 
 def create_dataloader(
-    path,
-    imgsz,
-    batch_size,
-    stride,
-    single_cls=False,
-    hyp=None,
-    augment=False,
-    cache=False,
-    pad=0.0,
-    rect=False,
-    rank=-1,
-    workers=8,
-    image_weights=False,
-    quad=False,
-    prefix="",
-    shuffle=False,
-    seed=0,
+        path,
+        imgsz,
+        batch_size,
+        stride,
+        single_cls=False,
+        hyp=None,
+        augment=False,
+        cache=False,
+        pad=0.0,
+        rect=False,
+        rank=-1,
+        workers=8,
+        image_weights=False,
+        quad=False,
+        prefix="",
+        shuffle=False,
+        seed=0,
 ):
     """Creates and returns a configured DataLoader instance for loading and processing image datasets."""
     if rect and shuffle:
@@ -541,22 +541,22 @@ class LoadImagesAndLabels(Dataset):
     rand_interp_methods = [cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_CUBIC, cv2.INTER_AREA, cv2.INTER_LANCZOS4]
 
     def __init__(
-        self,
-        path,
-        img_size=640,
-        batch_size=16,
-        augment=False,
-        hyp=None,
-        rect=False,
-        image_weights=False,
-        cache_images=False,
-        single_cls=False,
-        stride=32,
-        pad=0.0,
-        min_items=0,
-        prefix="",
-        rank=-1,
-        seed=0,
+            self,
+            path,
+            img_size=640,
+            batch_size=16,
+            augment=False,
+            hyp=None,
+            rect=False,
+            image_weights=False,
+            cache_images=False,
+            single_cls=False,
+            stride=32,
+            pad=0.0,
+            min_items=0,
+            prefix="",
+            rank=-1,
+            seed=0,
     ):
         """Initializes the YOLOv5 dataset loader, handling images and their labels, caching, and preprocessing."""
         self.img_size = img_size
@@ -706,7 +706,7 @@ class LoadImagesAndLabels(Dataset):
         for _ in range(n):
             im = cv2.imread(random.choice(self.im_files))  # sample image
             ratio = self.img_size / max(im.shape[0], im.shape[1])  # max(h, w)  # ratio
-            b += im.nbytes * ratio**2
+            b += im.nbytes * ratio ** 2
         mem_required = b * self.n / n  # GB required to cache dataset into RAM
         mem = psutil.virtual_memory()
         cache = mem_required * (1 + safety_margin) < mem.available  # to cache or not to cache, that is the question
@@ -815,8 +815,8 @@ class LoadImagesAndLabels(Dataset):
             img, labels = self.albumentations(img, labels)
             nl = len(labels)  # update after albumentations
 
-            # HSV color-space
-            augment_hsv(img, hgain=hyp["hsv_h"], sgain=hyp["hsv_s"], vgain=hyp["hsv_v"])
+            # # HSV color-space
+            # augment_hsv(img, hgain=hyp["hsv_h"], sgain=hyp["hsv_s"], vgain=hyp["hsv_v"])
 
             # Flip up-down
             if random.random() < hyp["flipud"]:
@@ -839,7 +839,8 @@ class LoadImagesAndLabels(Dataset):
             labels_out[:, 1:] = torch.from_numpy(labels)
 
         # Convert
-        img = img.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
+        img[..., :3] = img[..., 2::-1]
+        img = img.transpose((2, 0, 1))  # HWC to CHW, BGRA to RGBA
         img = np.ascontiguousarray(img)
 
         return torch.from_numpy(img), labels_out, self.im_files[index], shapes
@@ -859,7 +860,7 @@ class LoadImagesAndLabels(Dataset):
             if fn.exists():  # load npy
                 im = np.load(fn)
             else:  # read image
-                im = cv2.imread(f)  # BGR
+                im = cv2.imread(f, cv2.IMREAD_UNCHANGED)  # BGRA
                 assert im is not None, f"Image Not Found {f}"
             h0, w0 = im.shape[:2]  # orig hw
             r = self.img_size / max(h0, w0)  # ratio
@@ -982,12 +983,12 @@ class LoadImagesAndLabels(Dataset):
             segments9.extend(segments)
 
             # Image
-            img9[y1:y2, x1:x2] = img[y1 - pady :, x1 - padx :]  # img9[ymin:ymax, xmin:xmax]
+            img9[y1:y2, x1:x2] = img[y1 - pady:, x1 - padx:]  # img9[ymin:ymax, xmin:xmax]
             hp, wp = h, w  # height, width previous
 
         # Offset
         yc, xc = (int(random.uniform(0, s)) for _ in self.mosaic_border)  # mosaic center x, y
-        img9 = img9[yc : yc + 2 * s, xc : xc + 2 * s]
+        img9 = img9[yc: yc + 2 * s, xc: xc + 2 * s]
 
         # Concat/clip labels
         labels9 = np.concatenate(labels9, 0)
@@ -1102,7 +1103,7 @@ def extract_boxes(path=DATASETS_DIR / "coco128"):
 
                     b[[0, 2]] = np.clip(b[[0, 2]], 0, w)  # clip boxes outside of image
                     b[[1, 3]] = np.clip(b[[1, 3]], 0, h)
-                    assert cv2.imwrite(str(f), im[b[1] : b[3], b[0] : b[2]]), f"box failure in {f}"
+                    assert cv2.imwrite(str(f), im[b[1]: b[3], b[0]: b[2]]), f"box failure in {f}"
 
 
 def autosplit(path=DATASETS_DIR / "coco128/images", weights=(0.9, 0.1, 0.0), annotated_only=False):
@@ -1354,7 +1355,7 @@ class ClassificationDataset(torchvision.datasets.ImageFolder):
 
 
 def create_classification_dataloader(
-    path, imgsz=224, batch_size=16, augment=True, cache=False, rank=-1, workers=8, shuffle=True
+        path, imgsz=224, batch_size=16, augment=True, cache=False, rank=-1, workers=8, shuffle=True
 ):
     # Returns Dataloader object to be used with YOLOv5 Classifier
     """Creates a DataLoader for image classification, supporting caching, augmentation, and distributed training."""

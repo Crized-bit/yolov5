@@ -70,7 +70,7 @@ class Colors:
     @staticmethod
     def hex2rgb(h):
         """Converts hexadecimal color `h` to an RGB tuple (PIL-compatible) with order (R, G, B)."""
-        return tuple(int(h[1 + i : 1 + i + 2], 16) for i in (0, 2, 4))
+        return tuple(int(h[1 + i: 1 + i + 2], 16) for i in (0, 2, 4))
 
 
 colors = Colors()  # create instance for 'from utils.plots import colors'
@@ -85,7 +85,7 @@ def feature_visualization(x, module_type, stage, n=32, save_dir=Path("runs/detec
     save_dir:       Directory to save results.
     """
     if ("Detect" not in module_type) and (
-        "Segment" not in module_type
+            "Segment" not in module_type
     ):  # 'Detect' for Object Detect task,'Segment' for Segment task
         batch, channels, height, width = x.shape  # batch, channels, height, width
         if height > 1 and width > 1:
@@ -158,20 +158,23 @@ def plot_images(images, targets, paths=None, fname="images.jpg", names=None):
 
     max_size = 1920  # max image size
     max_subplots = 16  # max image subplots, i.e. 4x4
-    bs, _, h, w = images.shape  # batch size, _, height, width
+    bs, n_ch, h, w = images.shape  # batch size, n_ch, height, width
     bs = min(bs, max_subplots)  # limit plot images
-    ns = np.ceil(bs**0.5)  # number of subplots (square)
+    ns = np.ceil(bs ** 0.5)  # number of subplots (square)
     if np.max(images[0]) <= 1:
         images *= 255  # de-normalise (optional)
 
+    if n_ch == 4:
+        images = [cv2.cvtColor(image.transpose(1, 2, 0), cv2.COLOR_BGRA2BGR) for image in images]
+    elif n_ch == 3:
+        images = [image.transpose(1, 2, 0) for image in images]
     # Build Image
     mosaic = np.full((int(ns * h), int(ns * w), 3), 255, dtype=np.uint8)  # init
     for i, im in enumerate(images):
         if i == max_subplots:  # if last batch has fewer images than we expect
             break
         x, y = int(w * (i // ns)), int(h * (i % ns))  # block origin
-        im = im.transpose(1, 2, 0)
-        mosaic[y : y + h, x : x + w, :] = im
+        mosaic[y: y + h, x: x + w, :] = im
 
     # Resize (optional)
     scale = max_size / ns / max(h, w)
@@ -210,7 +213,7 @@ def plot_images(images, targets, paths=None, fname="images.jpg", names=None):
                 if labels or conf[j] > 0.25:  # 0.25 conf thresh
                     label = f"{cls}" if labels else f"{cls} {conf[j]:.1f}"
                     annotator.box_label(box, label, color=color)
-    annotator.im.save(fname)  # save
+    annotator.im.save(Path(fname))  # save
 
 
 def plot_lr_scheduler(optimizer, scheduler, epochs=300, save_dir=""):
@@ -379,7 +382,7 @@ def imshow_cls(im, labels=None, pred=None, names=None, nmax=25, verbose=False, f
         denormalize(im.clone()).cpu().float(), len(im), dim=0
     )  # select batch index 0, block by channels
     n = min(len(blocks), nmax)  # number of plots
-    m = min(8, round(n**0.5))  # 8 x 8 default
+    m = min(8, round(n ** 0.5))  # 8 x 8 default
     fig, ax = plt.subplots(math.ceil(n / m), m)  # 8 rows x n/8 cols
     ax = ax.ravel() if m > 1 else [ax]
     # plt.subplots_adjust(wspace=0.05, hspace=0.05)
@@ -508,7 +511,7 @@ def save_one_box(xyxy, im, file=Path("im.jpg"), gain=1.02, pad=10, square=False,
     b[:, 2:] = b[:, 2:] * gain + pad  # box wh * gain + pad
     xyxy = xywh2xyxy(b).long()
     clip_boxes(xyxy, im.shape)
-    crop = im[int(xyxy[0, 1]) : int(xyxy[0, 3]), int(xyxy[0, 0]) : int(xyxy[0, 2]), :: (1 if BGR else -1)]
+    crop = im[int(xyxy[0, 1]): int(xyxy[0, 3]), int(xyxy[0, 0]): int(xyxy[0, 2]), :: (1 if BGR else -1)]
     if save:
         file.parent.mkdir(parents=True, exist_ok=True)  # make directory
         f = str(increment_path(file).with_suffix(".jpg"))
